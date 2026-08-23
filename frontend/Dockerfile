@@ -2,7 +2,7 @@
 FROM node:20-alpine AS build
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci
+RUN npm install
 COPY . .
 # VITE_API_URL is baked in at build time; override with --build-arg if the
 # frontend needs to call a different backend host.
