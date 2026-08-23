@@ -6,7 +6,7 @@ ENV NODE_ENV=production
 # ---- Dependencies ----
 FROM base AS deps
 COPY package*.json ./
-RUN npm ci --omit=dev
+RUN npm install
 
 # ---- Runtime ----
 FROM base AS runtime
