@@ -1,3 +1,4 @@
+
 .terraform/
 
 *.tfstate
@@ -17,3 +18,31 @@ override.tf.json
 
 .terraformrc
 terraform.rc
+
+# Dependencies
+node_modules/
+
+# Env files
+.env
+.env.local
+*.env
+
+# Build output
+dist/
+build/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Docker
+*.pid
+

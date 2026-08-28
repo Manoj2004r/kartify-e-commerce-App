@@ -1,0 +1,58 @@
+version: "3.9"
+
+services:
+  kartify-mongo:
+    image: mongo:7
+    container_name: kartify-mongo
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_DATABASE: kartify
+    volumes:
+      - mongo-data:/data/db
+    ports:
+      - "27017:27017"
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  kartify-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: kartify-backend
+    restart: unless-stopped
+    depends_on:
+      kartify-mongo:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      MONGO_URI: mongodb://kartify-mongo:27017/kartify
+      JWT_SECRET: change_this_to_a_long_random_secret
+      JWT_EXPIRES_IN: 7d
+      CLIENT_URL: http://localhost:8080
+    ports:
+      - "5000:5000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:5000/health/live', r => process.exit(r.statusCode===200?0:1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  kartify-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: /api
+    container_name: kartify-frontend
+    restart: unless-stopped
+    depends_on:
+      - kartify-backend
+    ports:
+      - "80:80"
+
+volumes:
+  mongo-data:

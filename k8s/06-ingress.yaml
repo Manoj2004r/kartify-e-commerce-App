@@ -1,0 +1,30 @@
+# Requires an ingress controller (e.g. ingress-nginx) installed in the cluster.
+# For local clusters (minikube/kind), add "127.0.0.1 kartify.local" to /etc/hosts
+# and run `minikube tunnel` (minikube) or use `kubectl port-forward` as a fallback.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kartify-ingress
+  namespace: kartify
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "2m"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: kartify.local
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: kartify-backend
+                port:
+                  number: 5000
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: kartify-frontend
+                port:
+                  number: 80
