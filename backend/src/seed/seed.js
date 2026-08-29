@@ -4,11 +4,22 @@ const User = require('../models/User');
 const Product = require('../models/Product');
 const products = require('./products.json');
 
-const run = async () => {
-  await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/kartify');
-  console.log('[seed] Connected to MongoDB');
+/**
+ * Seeds demo data ONLY if the database is currently empty. Safe to call on
+ * every backend startup — if products already exist (real deploy, or a
+ * previous seed already ran), this does nothing and returns immediately.
+ * This is what makes it safe to run automatically rather than as a manual
+ * one-off step you have to remember every time.
+ */
+async function seedIfEmpty() {
+  const existingCount = await Product.countDocuments();
 
-  await Product.deleteMany({});
+  if (existingCount > 0) {
+    console.log(`[seed] Skipping — ${existingCount} product(s) already exist`);
+    return;
+  }
+
+  console.log('[seed] Database is empty, inserting demo data...');
   await Product.insertMany(products);
   console.log(`[seed] Inserted ${products.length} products`);
 
@@ -35,11 +46,24 @@ const run = async () => {
   }
 
   console.log('[seed] Done');
+}
+
+// Still runnable manually and standalone: `npm run seed`
+async function runStandalone() {
+  await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/kartify');
+  console.log('[seed] Connected to MongoDB');
+  await seedIfEmpty();
   await mongoose.disconnect();
   process.exit(0);
-};
+}
 
-run().catch((err) => {
-  console.error('[seed] Failed:', err);
-  process.exit(1);
-});
+// Only auto-run when this file is executed directly (`node seed.js`),
+// not when it's imported by server.js
+if (require.main === module) {
+  runStandalone().catch((err) => {
+    console.error('[seed] Failed:', err);
+    process.exit(1);
+  });
+}
+
+module.exports = { seedIfEmpty };
