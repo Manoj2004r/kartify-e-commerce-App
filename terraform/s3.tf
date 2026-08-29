@@ -30,7 +30,9 @@ resource "aws_s3_bucket_public_access_block" "frontend_bucket_public_access" {
 
 resource "aws_s3_bucket_policy" "frontend_bucket_policy" {
   bucket = aws_s3_bucket.frontend_bucket.id
-
+  depends_on = [
+    aws_s3_bucket_public_access_block.frontend_bucket_public_access
+  ]
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
