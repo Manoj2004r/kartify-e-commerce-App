@@ -41,7 +41,13 @@ async function start() {
   process.on('SIGINT', () => shutdown('SIGINT'));
 }
 
-start();
+start().catch((err) => {
+  // connectDB() now throws if it can never establish a connection —
+  // exit clearly so Docker/ECS's restart policy kicks in, rather than
+  // limping along with a broken database layer.
+  console.error('[server] Fatal startup error:', err.message);
+  process.exit(1);
+});
 
 process.on('unhandledRejection', (reason) => {
   console.error('[server] Unhandled rejection:', reason);
