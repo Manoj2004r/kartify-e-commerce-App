@@ -17,8 +17,8 @@ resource "aws_ecs_task_definition" "backend" {
 
       portMappings = [
         {
-          containerPort = 8080
-          hostPort      = 8080
+          containerPort = 5000
+          hostPort      = 5000
           protocol      = "tcp"
         }
       ]
