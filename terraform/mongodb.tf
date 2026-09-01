@@ -11,8 +11,9 @@ resource "aws_instance" "mongodb" {
   associate_public_ip_address = false
 
   iam_instance_profile = aws_iam_instance_profile.mongodb.name
-  user_data = <<-EOF
+user_data = <<-EOF
   #!/bin/bash
+  set -e
 
   # Update packages
   apt-get update -y
@@ -34,11 +35,22 @@ resource "aws_instance" "mongodb" {
   # Install MongoDB
   apt-get install -y mongodb-org
 
+  # Configure MongoDB to accept connections from the VPC
+  sed -i 's/^  bindIp: 127.0.0.1/  bindIp: 0.0.0.0/' /etc/mongod.conf
+
   # Start MongoDB
   systemctl start mongod
 
   # Start MongoDB automatically after reboot
   systemctl enable mongod
+
+  # Wait until MongoDB is ready
+  until mongosh --eval "db.adminCommand('ping')" >/dev/null 2>&1; do
+    echo "Waiting for MongoDB..."
+    sleep 5
+  done
+
+  echo "MongoDB is ready"
 EOF
   root_block_device {
     volume_size = 20
