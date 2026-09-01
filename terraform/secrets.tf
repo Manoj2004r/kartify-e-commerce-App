@@ -10,6 +10,6 @@ resource "aws_secretsmanager_secret_version" "mongodb" {
   secret_id = aws_secretsmanager_secret.mongodb.id
 
   secret_string = jsonencode({
-    MONGO_URI = "mongodb://<ip:port>/kartify"
+    MONGO_URI = "mongodb://${aws_instance.mongodb.private_ip}:27017/kartify"
   })
 }
