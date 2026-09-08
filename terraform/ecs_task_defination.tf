@@ -24,11 +24,11 @@ resource "aws_ecs_task_definition" "backend" {
       ]
 
       secrets = [
-  {
-    name      = "MONGO_URI"
-    valueFrom = "${aws_secretsmanager_secret.mongodb.arn}:MONGO_URI::"
-  }
-]
+        {
+          name      = "MONGO_URI"
+          valueFrom = "${aws_secretsmanager_secret.mongodb.arn}:MONGO_URI::"
+        }
+      ]
       logConfiguration = {
         logDriver = "awslogs"
 

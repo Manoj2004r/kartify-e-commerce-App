@@ -11,7 +11,7 @@ resource "aws_instance" "mongodb" {
   associate_public_ip_address = false
 
   iam_instance_profile = aws_iam_instance_profile.mongodb.name
-user_data = <<-EOF
+  user_data            = <<-EOF
   #!/bin/bash
   set -e
 
