@@ -8,6 +8,11 @@ resource "aws_ecs_service" "backend" {
   launch_type = "FARGATE"
 
   enable_execute_command = true
+  lifecycle {
+    ignore_changes = [
+      task_definition
+    ]
+  }
 
   network_configuration {
     subnets = [
