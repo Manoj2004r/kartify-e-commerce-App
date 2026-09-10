@@ -20,10 +20,13 @@ async function seedIfEmpty() {
   // ONE caller, ever, can be the one that actually creates this document,
   // even if several containers call this in the same instant.
   const previous = await SeedLock.findOneAndUpdate(
-    { _id: LOCK_ID },
-    { $setOnInsert: { status: 'in-progress', startedAt: new Date() } },
-    { upsert: true, rawResult: true }
-  );
+  { _id: LOCK_ID },
+  { $setOnInsert: { status: 'in-progress', startedAt: new Date() } },
+  {
+    upsert: true,
+    includeResultMetadata: true
+  }
+);
 
   // With rawResult, `previous.lastErrorObject.updatedExisting` tells us
   // definitively whether a document already existed before this call —
