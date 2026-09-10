@@ -5,6 +5,7 @@ pipeline {
         AWS_REGION = 'ap-south-1'
         S3_BUCKET  = 'kartify-frontend-bucket-293174400265'
         S3_WEBSITE = 'http://kartify-frontend-bucket-293174400265.s3-website.ap-south-1.amazonaws.com'
+        VITE_API_URL = 'http://kartify-alb-1072041883.ap-south-1.elb.amazonaws.com/api'
     }
 
     options {
