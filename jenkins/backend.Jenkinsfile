@@ -3,8 +3,8 @@ pipeline {
     agent any
 
     environment {
-        AWS_REGION     = 'ap-south-1'
-        AWS_ACCOUNT    = '293174400265'
+        AWS_REGION     = 'aws-region'
+        AWS_ACCOUNT    = 'aws-account-id'
 
         ECR_REPOSITORY = 'kartify-backend'
 
