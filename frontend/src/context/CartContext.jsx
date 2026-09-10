@@ -59,7 +59,6 @@ export function CartProvider({ children }) {
       }
     };
     sync();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const addToCart = async (product, qty = 1) => {
