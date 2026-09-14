@@ -3,8 +3,8 @@ pipeline {
     agent any
 
     environment {
-        AWS_REGION     = 'ap-south-1'
-        AWS_ACCOUNT    = '293174400265'
+        AWS_REGION     = 'AWS-region'
+        AWS_ACCOUNT    = 'account-id'
 
         ECR_REPOSITORY = 'kartify-backend'
 
@@ -13,6 +13,7 @@ pipeline {
 
         IMAGE_TAG      = "${env.GIT_COMMIT}"
         ECR_IMAGE      = "${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:${env.GIT_COMMIT}"
+        AWS_ALB        = "http://url/health/ready"    
     }
 
     options {
@@ -276,7 +277,7 @@ pipeline {
                     for i in $(seq 1 10)
                     do
                         STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-                            "http://kartify-alb-1072041883.ap-south-1.elb.amazonaws.com/health/ready" \
+                            "${AWS_ALB}" \
                             || true)
 
                         echo "Attempt ${i}: HTTP ${STATUS}"
