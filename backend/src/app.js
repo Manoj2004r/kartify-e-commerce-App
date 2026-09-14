@@ -5,6 +5,12 @@ const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
 
+const {
+  client,
+  httpRequestsTotal,
+  httpRequestDuration,
+} = require('./metrics');
+
 const authRoutes = require('./routes/authRoutes');
 const productRoutes = require('./routes/productRoutes');
 const cartRoutes = require('./routes/cartRoutes');
@@ -14,6 +20,36 @@ const healthRoutes = require('./routes/healthRoutes');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
+
+app.use((req, res, next) => {
+  const start = process.hrtime();
+
+  res.on('finish', () => {
+    const duration = process.hrtime(start);
+    const durationSeconds = duration[0] + duration[1] / 1e9;
+
+    const route = req.route?.path || req.path;
+    const statusCode = res.statusCode.toString();
+
+    httpRequestsTotal.inc({
+      method: req.method,
+      route,
+      status_code: statusCode,
+    });
+
+    httpRequestDuration.observe(
+      {
+        method: req.method,
+        route,
+        status_code: statusCode,
+      },
+      durationSeconds
+    );
+  });
+
+  next();
+});
+
 
 app.set('trust proxy', 1);
 
@@ -40,6 +76,11 @@ const limiter = rateLimit({
 app.use('/api', limiter);
 
 app.use('/health', healthRoutes);
+
+app.get('/metrics', async (req, res) => {
+  res.set('Content-Type', client.register.contentType);
+  res.end(await client.register.metrics());
+});
 
 app.get('/', (req, res) => {
   res.json({ name: 'Kartify API', status: 'running' });
