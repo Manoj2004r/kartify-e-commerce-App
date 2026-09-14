@@ -2,10 +2,10 @@ pipeline {
     agent any
 
     environment {
-        AWS_REGION = 'ap-south-1'
-        S3_BUCKET  = 'kartify-frontend-bucket-293174400265'
-        S3_WEBSITE = 'http://kartify-frontend-bucket-293174400265.s3-website.ap-south-1.amazonaws.com'
-        VITE_API_URL = 'http://kartify-alb-713669827.ap-south-1.elb.amazonaws.com/api'
+        AWS_REGION = 'AWS_region'
+        S3_BUCKET  = 'S3_bucket_name'
+        S3_WEBSITE = 'http://S3_bucket_url'
+        VITE_API_URL = 'http://alb_url/api'
     }
 
     options {
