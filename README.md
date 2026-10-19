@@ -23,7 +23,7 @@ Terraform is used to provision AWS infrastructure, while Jenkins automates deplo
 
 ## 🏗️ Architecture
 
-![Kartify AWS Architecture](docs/architecture/kartify-architecture.png)
+![Kartify AWS Architecture](docs/kartify-architecture.png)
 
 ### Architecture Components
 
