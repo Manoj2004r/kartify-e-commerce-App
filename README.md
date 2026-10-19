@@ -1,223 +1,306 @@
-# Kartify — Handoff to DevOps
 
-**From:** Development team
-**To:** DevOps
-**Purpose:** Everything you need to containerize and deploy this app. This
-document intentionally does **not** include a Dockerfile or Kubernetes
-manifests — that's your side of the fence. Ask the dev team if anything
-below is unclear or missing.
+# 🛒 Kartify — AWS E-Commerce Deployment with DevOps Automation
 
----
+An e-commerce application deployed on AWS using Infrastructure as Code, containerization, and CI/CD practices. This project demonstrates cloud infrastructure provisioning, application deployment, networking, secrets management, and troubleshooting.
 
-## 1. What this app is
+## 📌 Project Overview
 
-Kartify is a two-service web app: a React single-page app (frontend) talking
-to a Node.js REST API (backend), backed by MongoDB.
+Kartify consists of a React frontend, a Node.js/Express backend, and a MongoDB database. The frontend is hosted on Amazon S3, the backend runs on Amazon ECS with AWS Fargate, and MongoDB runs on an EC2 instance in a private subnet.
 
-```
-Browser → [Frontend: React SPA]  --/api--> [Backend: Node/Express API] --> [MongoDB]
-```
+Terraform is used to provision AWS infrastructure, while Jenkins automates deployment workflows.
 
-There is no server-side rendering. The frontend is a static build output
-(HTML/CSS/JS) once compiled — it needs a web server to serve those static
-files in production, not a Node process.
+### Key Objectives
 
----
+- Provision AWS infrastructure using Terraform.
+- Containerize the backend using Docker.
+- Deploy backend containers using Amazon ECS and AWS Fargate.
+- Store backend container images in Amazon ECR.
+- Host the static frontend on Amazon S3.
+- Configure traffic routing using an Application Load Balancer.
+- Isolate application and database resources using VPC subnets and security groups.
+- Manage sensitive application configuration using AWS Secrets Manager.
+- Automate infrastructure and application deployment using Jenkins.
 
-## 2. Repo layout
+## 🏗️ Architecture
 
-```
+![Kartify AWS Architecture](docs/architecture/kartify-architecture.png)
+
+### Architecture Components
+
+| Component | Purpose |
+|---|---|
+| Amazon S3 | Hosts the compiled React frontend |
+| Amazon VPC | Provides network isolation for AWS resources |
+| Public Subnets | Host internet-facing resources and networking components |
+| Private Subnets | Host ECS backend tasks and the MongoDB EC2 instance |
+| Internet Gateway | Enables internet connectivity for resources using public routing |
+| NAT Gateway | Provides outbound internet access for resources in private subnets when configured |
+| Application Load Balancer | Routes incoming API traffic to backend targets |
+| Amazon ECS | Manages backend container workloads |
+| AWS Fargate | Runs backend containers without managing the underlying servers |
+| Amazon ECR | Stores backend Docker images |
+| Amazon EC2 | Hosts the MongoDB database |
+| AWS Secrets Manager | Stores sensitive application configuration |
+| Terraform | Provisions and manages infrastructure as code |
+| Jenkins | Automates build, deployment, and infrastructure workflows |
+
+> **Frontend routing note:** The frontend is hosted directly on S3. S3 static website hosting does not reverse-proxy `/api/*` requests to the ALB. If the frontend uses relative API paths, configure a suitable reverse proxy or update the frontend to call the publicly reachable HTTPS API endpoint. Configure HTTPS separately if using an S3 website endpoint.
+
+## 🔄 Application Request Flow
+
+1. The user opens the React frontend hosted on Amazon S3.
+2. The frontend sends API requests to the backend endpoint.
+3. The Application Load Balancer routes requests to the ECS Fargate backend.
+4. The Node.js backend processes the request and communicates with MongoDB.
+5. MongoDB returns the requested data to the backend.
+6. The backend returns the API response to the frontend.
+
+The database is not accessed directly by the browser. Database connectivity is restricted to the backend.
+
+## 🔧 Technology Stack
+
+### Cloud
+- Amazon Web Services (AWS)
+- Amazon S3
+- Amazon VPC
+- Amazon EC2
+- Amazon ECS and AWS Fargate
+- Amazon ECR
+- Application Load Balancer
+- AWS IAM
+- AWS Secrets Manager
+
+### DevOps and Automation
+- Terraform
+- Jenkins
+- Docker
+- Git and GitHub
+- Linux
+- Bash
+
+### Application
+- React
+- Node.js
+- Express.js
+- MongoDB
+
+## 📁 Repository Structure
+
+```text
 kartify/
-├── backend/     ← Node.js API service
-├── frontend/    ← React SPA
+├── backend/
+│   ├── src/
+│   ├── package.json
+│   ├── package-lock.json
+│   └── Dockerfile
+├── frontend/
+│   ├── src/
+│   ├── package.json
+│   ├── package-lock.json
+│   └── Dockerfile
+├── docs/
+│   └── architecture/
+│       └── kartify-architecture.png
+├── terraform/
+│   ├── provider.tf
+│   ├── vpc.tf
+│   ├── subnets.tf
+│   ├── route_tables.tf
+│   ├── internet_gateway.tf
+│   ├── nat_gateway.tf
+│   ├── security_groups.tf
+│   ├── alb.tf
+│   ├── alb_target_group.tf
+│   ├── ecs.tf
+│   ├── ecs_service.tf
+│   ├── ecs_task_defination.tf
+│   ├── ecr.tf
+│   ├── s3.tf
+│   ├── secrets.tf
+│   ├── mongodb.tf
+│   ├── iam.tf
+│   ├── variables.tf
+│   └── outputs.tf
+├── Jenkinsfile
+├── .gitignore
+└── README.md
 ```
 
-Each has its own `package.json`, its own dependencies, and should be built
-into its **own separate image**. Don't combine them into one container.
+> Update this tree to match the actual files and folders in your repository. Include the Terraform state-locking configuration and additional IAM files if they exist, but never commit Terraform state files or credentials.
 
----
+## ⚙️ Prerequisites
 
-## 3. Backend service
+Before deploying the project, ensure you have:
 
-### Runtime
-- **Language/runtime:** Node.js
-- **Required version:** Node 18 or later (developed and tested on Node 20)
-- **Package manager:** npm (a `package-lock.json` is committed — use `npm ci`,
-  not `npm install`, for reproducible installs in the image)
+- An AWS account with appropriate permissions.
+- AWS CLI installed and configured.
+- Terraform installed.
+- Docker installed.
+- Node.js and npm for local application development.
+- Jenkins with the required pipeline, Git, and deployment tools.
+- Git and GitHub access.
 
-### Entry point
-- Start command: `node src/server.js`
-- There's also `npm start` defined in `package.json` which runs the same thing
-- The process listens on the port defined by the `PORT` environment variable
-  (defaults to `5000` if unset)
+Use an IAM role for AWS authentication where possible. Avoid hardcoding access keys in scripts or pipeline files.
 
-### Build step
-None. This is plain JavaScript (CommonJS), not TypeScript — no compile/build
-step needed. Just install dependencies and run.
+## 🚀 Deployment Workflow
 
-### Dependencies that must be installed
-Everything under `"dependencies"` in `backend/package.json`. Nothing under
-`"devDependencies"` (`nodemon`) is needed at runtime — that's dev-only for
-hot-reload and should be excluded from the production image.
+### 1. Infrastructure Provisioning
 
-### Environment variables it expects
+Terraform provisions the required AWS infrastructure, including:
 
-| Variable | Required | Default | Notes |
-|---|---|---|---|
-| `PORT` | No | `5000` | Port the HTTP server binds to |
-| `NODE_ENV` | No | `development` | Set to `production` in deployed environments |
-| `MONGO_URI` | **Yes** | `mongodb://localhost:27017/kartify` | Full MongoDB connection string. In containers this must point at the Mongo service's hostname, not `localhost` |
-| `JWT_SECRET` | **Yes** | none | Used to sign auth tokens. Must be a long random string. **This is a secret — do not bake it into the image or commit it to git.** |
-| `JWT_EXPIRES_IN` | No | `7d` | Token lifetime |
-| `CLIENT_URL` | No | none | Used for CORS — should be set to the public URL of the frontend |
-| `RATE_LIMIT_WINDOW_MS` | No | `900000` | Rate-limit window |
-| `RATE_LIMIT_MAX` | No | `300` | Max requests per window |
+- VPC, subnets, route tables, and gateways.
+- Security groups and networking rules.
+- Application Load Balancer and target group.
+- ECS cluster, task definition, and service.
+- ECR repository.
+- S3 frontend bucket.
+- MongoDB EC2 infrastructure.
+- IAM roles and Secrets Manager integration.
 
-A committed `backend/.env.example` file lists these too, but note it's an
-*example* file with placeholder values, not something to copy into the
-image — real values should come from your secrets mechanism at deploy time.
+Example commands:
 
-### Network
-- Listens on **one port**: `5000` (via `PORT`)
-- Needs outbound network access to MongoDB (`MONGO_URI` host/port)
-- No other outbound calls at runtime
-
-### Health checks
-Two HTTP endpoints exist specifically for orchestration probes:
-
-| Endpoint | Purpose | Returns 200 when |
-|---|---|---|
-| `GET /health/live` | Liveness | The process is up and responding at all |
-| `GET /health/ready` | Readiness | The process is up **and** the MongoDB connection is established |
-
-Use `/health/live` for a liveness probe and `/health/ready` for a readiness
-probe if your orchestrator distinguishes the two.
-
-### Graceful shutdown
-The process listens for `SIGTERM` and `SIGINT`, stops accepting new
-connections, finishes in-flight requests, then exits. Give it a reasonable
-grace period (10+ seconds) before a hard kill in your orchestration config.
-
-### Filesystem
-- Stateless — writes nothing to local disk at runtime
-- No volumes needed for the backend itself (only MongoDB needs persistent
-  storage)
-
-### One-time setup task
-There's a seed script (`npm run seed`, runs `src/seed/seed.js`) that loads
-demo product data and two demo user accounts into MongoDB. This is **not**
-part of normal startup — it's a manual/one-off task, not something the
-container's default command should run automatically. How you expose this
-(a separate Job, an exec-into-pod command, etc.) is up to you.
-
-### Security notes for the image
-- The app does not need root privileges at runtime — it only binds to a port
-  and talks to MongoDB
-- No native/compiled dependencies requiring build tools (no node-gyp, no
-  Python) — a minimal Node base image should work fine
-
----
-
-## 4. Frontend service
-
-### Runtime (build time)
-- **Language/runtime:** Node.js 18+ (only needed to *build* the app — not to
-  run it)
-- **Build tool:** Vite
-- **Package manager:** npm (`package-lock.json` committed — use `npm ci`)
-
-### Build step
-This app **must be compiled** before it can be served. The build command is:
-
+```bash
+cd terraform
+terraform init
+terraform fmt -check
+terraform validate
+terraform plan
+terraform apply
 ```
+
+Review the plan before applying changes. Configure remote state and state locking for collaborative or production environments.
+
+### 2. Backend Containerization
+
+The backend is a Node.js application that listens on port 5000 by default.
+
+Build and test the backend image locally:
+
+```bash
+cd backend
+docker build -t kartify-backend .
+docker run --rm -p 5000:5000 kartify-backend
+```
+
+Supply the required environment variables through a secure configuration mechanism when running the application. Do not bake secrets into the image.
+
+### 3. Backend Image Publishing
+
+The backend Docker image is published to Amazon ECR.
+
+Typical workflow:
+
+1. Authenticate Docker to ECR using AWS CLI.
+2. Build the backend image.
+3. Tag the image with the ECR repository URI.
+4. Push the image to ECR.
+5. Update the ECS task definition to use the new image.
+6. Deploy the updated task definition through the ECS service.
+
+Use unique image tags, such as a Git commit SHA, instead of relying exclusively on `latest`.
+
+### 4. Frontend Build and Deployment
+
+The frontend uses Vite and must be compiled into static files before deployment.
+
+```bash
+cd frontend
+npm ci
 npm run build
 ```
 
-This produces a static output folder: `frontend/dist/`. That folder contains
-plain HTML/CSS/JS — no Node process is needed to serve it.
+The build output is generated in `frontend/dist/`.
 
-### What serves it in production
-The compiled `dist/` folder needs to be served by a static web server. The
-dev team has not specified which one — pick whatever your standard is
-(nginx, Caddy, a static-hosting CDN, etc.). Whatever you choose needs to:
+Upload the generated files to the configured S3 bucket using the deployment process defined for the project. Ensure the frontend API URL and hosting configuration are correct for the deployed environment.
 
-1. Serve `dist/index.html` for **any unmatched route** (this is a
-   single-page app using client-side routing — a request to, say,
-   `/product/some-item` must still return `index.html`, not a 404)
-2. Proxy or otherwise forward requests to `/api/*` through to the backend
-   service (the frontend code calls relative paths like `/api/products` in
-   production — see note below)
-3. Serve on port `80` (or whatever convention you use — just needs to be
-   documented back to the dev team)
+### 5. Jenkins CI/CD
 
-### Build-time configuration
-One build-time variable matters:
+The Jenkins workflow can automate:
 
-| Variable | Required | Default | Notes |
-|---|---|---|---|
-| `VITE_API_URL` | No | `/api` | The base URL the frontend calls for API requests. **This gets baked into the compiled JS at build time** — it cannot be changed after the image is built without rebuilding. If left as `/api` (the default), the web server in front of the static files must reverse-proxy `/api/*` to the backend service — see point 2 above. |
+1. Checking out the source code from GitHub.
+2. Validating Terraform configuration.
+3. Building the backend Docker image.
+4. Publishing the image to ECR.
+5. Updating the ECS service.
+6. Building the frontend.
+7. Uploading frontend assets to S3.
+8. Running deployment verification checks.
 
-There are no runtime environment variables for the frontend — once it's
-built, it's just static files.
+Terraform infrastructure changes should be reviewed before approval and application.
 
-### Dependencies
-Everything under `"dependencies"` **and** `"devDependencies"` in
-`frontend/package.json` is needed at build time (Vite, Tailwind, etc. are
-devDependencies but required to produce the build). None of them are needed
-in the final runtime image if you do a multi-stage build — only the
-contents of `dist/` need to ship in the final image.
+The exact pipeline stages depend on the Jenkinsfile implemented in the repository.
 
-### Health check
-No custom health endpoint — a plain `GET /` returning `200` is sufficient
-proof the static server is up.
+## 🔐 Security Considerations
+
+- Store `JWT_SECRET` and sensitive MongoDB connection strings in AWS Secrets Manager.
+- Inject secrets into ECS tasks at runtime rather than embedding them in Docker images.
+- Use IAM roles and least-privilege permissions.
+- Restrict database access to the backend's security group on port 27017.
+- Do not expose MongoDB publicly.
+- Restrict administrative access to EC2 and other infrastructure.
+- Avoid committing `.env` files, credentials, private keys, Terraform state, or secret values.
+- Use HTTPS for public application traffic with an appropriate certificate and routing configuration.
+- Enable database authentication and review backup and recovery requirements before production use.
+
+## 🩺 Health Checks and Troubleshooting
+
+The backend exposes the following health endpoints:
+
+| Endpoint | Purpose |
+|---|---|
+| `/health/live` | Checks whether the backend process is responding |
+| `/health/ready` | Checks whether the backend is ready, including MongoDB connectivity |
+
+Useful troubleshooting commands:
+
+```bash
+docker ps
+docker logs <container-name>
+docker inspect <container-name>
+aws ecs describe-services --cluster <cluster-name> --services <service-name>
+aws ecs describe-tasks --cluster <cluster-name> --tasks <task-id>
+```
+
+Check the ECS service events, target group health, security group rules, application logs, and database connectivity when troubleshooting deployment failures.
+
+## 🌱 Database Initialization
+
+Kartify provides a seed script for inserting demo products and user accounts.
+
+Run the seed operation as a separate, intentional task after confirming database connectivity. Do not run it automatically every time the backend starts.
+
+Use demo credentials only in non-production environments and never publish real passwords or production database connection strings.
+
+## 📈 Possible Future Improvements
+
+- Add CloudFront and HTTPS for secure, scalable frontend delivery.
+- Introduce automated tests and deployment quality gates.
+- Add image vulnerability scanning and dependency checks.
+- Implement Prometheus and Grafana monitoring where appropriate.
+- Improve database security, backups, and recovery procedures.
+- Use automated rollback strategies and deployment health verification.
+- Evaluate managed database options for production workloads.
+
+These are potential improvements, not claims that the features are already implemented.
+
+## 🎯 Key Learning Outcomes
+
+- AWS cloud networking and infrastructure provisioning.
+- Infrastructure as Code using Terraform.
+- Containerization and image management with Docker and ECR.
+- Application deployment using ECS and AWS Fargate.
+- CI/CD automation using Jenkins.
+- Secure configuration and secrets management.
+- Troubleshooting application, networking, and deployment issues.
+
+## 👨‍💻 Author
+
+**Manoj R**
+
+- GitHub: [Manoj2004r](https://github.com/Manoj2004r)
+- LinkedIn: https://www.linkedin.com/in/manoj-r-369o
+- Email: manojr3690@gmail.com
 
 ---
 
-## 5. Database
-
-- **Engine:** MongoDB (developed/tested against MongoDB 7)
-- The backend is the only thing that talks to it directly
-- Needs **persistent storage** — data must survive container/pod restarts
-- No special MongoDB configuration is required (no replica set, no auth
-  currently enforced at the DB layer — if you want to add DB-level auth,
-  coordinate the credentials with the `MONGO_URI` the backend receives)
-- Default port: `27017`
-
----
-
-## 6. Inter-service communication
-
-| From | To | Protocol | Notes |
-|---|---|---|---|
-| Frontend (browser) | Backend | HTTPS/HTTP, path `/api/*` | Frontend calls relative `/api/...` paths in production — something in front (reverse proxy / ingress) must route these to the backend service |
-| Backend | MongoDB | MongoDB wire protocol, port 27017 | Connection string via `MONGO_URI` |
-
-There is no direct network path needed between the frontend build/serve
-layer and MongoDB.
-
----
-
-## 7. What DevOps needs to produce
-
-Based on the above, you'll need to write:
-
-1. A **Dockerfile for the backend** — installs prod dependencies, runs
-   `node src/server.js`, exposes port 5000, ideally runs as non-root
-2. A **Dockerfile for the frontend** — multi-stage: build with Node/Vite,
-   then serve the static `dist/` output with a lightweight web server,
-   including SPA fallback routing and an `/api` reverse-proxy rule
-3. Wherever secrets (`JWT_SECRET`, `MONGO_URI` if it contains credentials)
-   are injected — not baked into either image
-4. Whatever orchestration layer you're targeting (compose file, Kubernetes
-   manifests, etc.) — wire the two services + MongoDB together, using the
-   health endpoints above for probes
-
-## 8. Questions to bring back to the dev team
-
-- Confirm which Node LTS version to pin in the images
-- Confirm expected resource footprint (CPU/memory) under load, if load
-  testing hasn't happened yet
-- Confirm whether MongoDB should be a managed/external service in production
-  or self-hosted in the same environment
-- Confirm log format expectations (the backend currently logs via `morgan`
-  to stdout — fine for container log collection as-is, but confirm)
+*This project is intended for learning and demonstrating cloud infrastructure and DevOps practices. Review security, availability, and cost requirements before using the architecture for production workloads.*
